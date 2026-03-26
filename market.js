@@ -1,29 +1,24 @@
-const SERVICE_KEY = '1d1043efb7e415ec16b01e63c91431f9ef51e9fe28d3be82ef841228537ed315'; // 반드시 따옴표 안에 넣으세요!
+// 1. 공공데이터포털에서 받은 인증키를 여기에 넣으세요!
+const SERVICE_KEY = '1d1043efb7e415ec16b01e63c91431f9ef51e9fe28d3be82ef841228537ed315'; 
 
-const groups = {
+// 2. 야후에서 가져올 해외 지수들
+const overseasGroups = {
     "🌎 해외": { "S&P500": "^GSPC", "나스닥": "^IXIC" },
-    "🛢️ 에너지": { "WTI유가": "CL=F" },
-    "💵 채권": { "미10년채": "^TNX" }
+    "🛢️ 지표": { "WTI유가": "CL=F", "미10년채": "^TNX" }
 };
 
-// 한국 시장 기준 상태 판별
-function getMarketStatus() {
+// 한국 시간 및 장 상태 판별
+function updateMarketInfo() {
     const now = new Date();
     const kst = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (9 * 3600000));
     const day = kst.getDay();
     const timeVal = kst.getHours() * 100 + kst.getMinutes();
 
-    if (day === 0 || day === 6) return "주말 휴장";
-    if (timeVal >= 900 && timeVal <= 1530) return "장중";
-    if (timeVal < 900) return "장 시작전";
-    return "장 마감";
-}
+    let status = (day === 0 || day === 6) ? "주말 휴장" : 
+                 (timeVal >= 900 && timeVal < 1530) ? "장중" : "장 마감";
 
-function updateClock() {
-    const now = new Date();
-    const kst = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (9 * 3600000));
     const timeStr = kst.toLocaleTimeString('ko-KR', { hour12: false });
-    document.getElementById('current-time').innerText = `${timeStr} (${getMarketStatus()})`;
+    document.getElementById('current-time').innerHTML = `${timeStr} <span class="status-badge">${status}</span>`;
 }
 
 async function getStockData() {
@@ -32,9 +27,8 @@ async function getStockData() {
     
     let htmlContent = "";
 
-    // 1. 국내 지수 (공공데이터포털 API 연동)
+    // --- [A] 국내 지수 (공공데이터 API 호출) ---
     try {
-        htmlContent += `<span class="group-label">🇰🇷 국내</span>`;
         const krUrl = `https://apis.data.go.kr/1160100/service/GetIndexQuotationsService/getIndexQuotations?serviceKey=${SERVICE_KEY}&resultType=json&numOfRows=5&pageNo=1`;
         const proxyUrl = 'https://api.allorigins.win/get?url=';
         
@@ -43,6 +37,7 @@ async function getStockData() {
         const data = JSON.parse(json.contents);
         const krItems = data.response.body.items.item;
 
+        htmlContent += `<span class="group-label">🇰🇷 국내</span>`;
         krItems.forEach(item => {
             if (item.idxNm === "코스피" || item.idxNm === "코스닥") {
                 const price = parseFloat(item.clpr).toFixed(2);
@@ -62,12 +57,11 @@ async function getStockData() {
             }
         });
     } catch (e) {
-        console.error("국내 지수 로드 실패:", e);
-        // 실패 시 비상용으로 야후 데이터라도 시도하게 하려면 여기에 추가 로직 가능
+        console.error("국내 지수 로드 실패. 키 활성화 대기 중일 수 있습니다.");
     }
 
-    // 2. 해외 및 기타 지수 (야후 파이낸스)
-    for (const [groupName, symbols] of Object.entries(groups)) {
+    // --- [B] 해외 및 기타 지수 (야후 API 호출) ---
+    for (const [groupName, symbols] of Object.entries(overseasGroups)) {
         htmlContent += `<span class="group-label">${groupName}</span>`;
         for (const [name, symbol] of Object.entries(symbols)) {
             try {
@@ -105,7 +99,8 @@ async function getStockData() {
     }
 }
 
-updateClock();
-setInterval(updateClock, 1000);
+// 초기 실행 및 인터벌 설정
+updateMarketInfo();
+setInterval(updateMarketInfo, 1000);
 getStockData();
-setInterval(getStockData, 30000); // API 부하를 줄이기 위해 30초 권장
+setInterval(getStockData, 30000);
