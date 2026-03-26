@@ -2,25 +2,56 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주식 아가방 Ticker</title>
     <style>
-        body { margin: 0; padding: 0; background-color: transparent; overflow: hidden; font-family: sans-serif; }
-        .ticker-wrapper { display: flex; width: 100vw; height: 50px; background: rgba(0, 0, 0, 0.9); border-top: 2px solid #ffd700; align-items: center; }
-        .ticker-title { background: #ffd700; color: #000; font-weight: bold; padding: 0 20px; height: 100%; display: flex; align-items: center; white-space: nowrap; }
-        .ticker-container { flex: 1; overflow: hidden; white-space: nowrap; }
-        .ticker-move { display: inline-block; white-space: nowrap; animation: ticker 40s linear infinite; color: white; padding-left: 20px; }
-        .item { margin-right: 60px; font-size: 1.2rem; font-weight: 500; }
+        /* 클로드 버전의 톤앤매너 복구 */
+        body { margin: 0; padding: 0; background-color: transparent; overflow: hidden; font-family: 'Pretendard', -apple-system, sans-serif; }
+        .ticker-wrapper {
+            display: flex;
+            width: 1920px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.8);
+            border-top: 2px solid #ffd700;
+            align-items: center;
+        }
+        .ticker-title {
+            background: #ffd700;
+            color: #000;
+            font-weight: bold;
+            padding: 0 25px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            font-size: 1.1rem;
+            z-index: 10;
+        }
+        .ticker-container {
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .ticker-move {
+            display: inline-block;
+            white-space: nowrap;
+            animation: ticker 30s linear infinite;
+            color: #ffffff;
+            font-size: 1.1rem;
+        }
+        .item { margin-right: 50px; }
         .up { color: #ff4d4d; }
         .down { color: #4d94ff; }
-        @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
     </style>
 </head>
 <body>
     <div class="ticker-wrapper">
         <div class="ticker-title">MARKET LIVE</div>
         <div class="ticker-container">
-            <div id="ticker-content" class="ticker-move">데이터 로드 중...</div>
+            <div id="ticker-content" class="ticker-move">데이터를 불러오는 중입니다...</div>
         </div>
     </div>
     <script src="market.js"></script>
