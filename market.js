@@ -1,75 +1,54 @@
-const symbols = {
-    "코스피": "^KS11",
-    "코스닥": "^KQ11",
-    "S&P500": "^GSPC",
-    "미국 10년물": "^TNX",
-    "WTI 유가": "CL=F"
-};
+// 발급받은 본인의 서비스키를 여기에 입력하세요
+const SERVICE_KEY = '1d1043efb7e415ec16b01e63c91431f9ef51e9fe28d3be82ef841228537ed315';
 
-async function getStockData() {
+async function getDomesticData() {
     const content = document.getElementById('ticker-content');
     if (!content) return;
-    
+
     let items = [];
-
-    for (const [name, symbol] of Object.entries(symbols)) {
-        try {
-            // 캐시 방지를 위해 요청 주소 뒤에 랜덤 타임스탬프를 붙입니다.
-            const proxyUrl = 'https://api.allorigins.win/get?url=';
-            const targetUrl = encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d&_=${Date.now()}`);
-            
-            const res = await fetch(proxyUrl + targetUrl);
-            const json = await res.json();
-            const data = JSON.parse(json.contents);
-            
-            if (data.chart && data.chart.result && data.chart.result[0]) {
-                const result = data.chart.result[0];
-                const meta = result.meta;
-                
-                const price = meta.regularMarketPrice;
-                const prevPrice = meta.previousClose;
-                
-                if (price && prevPrice) {
-                    const changeValue = (price - prevPrice);
-                    const percent = ((changeValue / prevPrice) * 100).toFixed(2);
-                    
-                    const colorClass = changeValue >= 0 ? "up" : "down";
-                    const sign = changeValue >= 0 ? "▲" : "▼";
-                    
-                    const displayPrice = price.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    });
-
-                    items.push(`
-                        <span class="item">
-                            ${name} 
-                            <span class="${colorClass}">
-                                ${price.toFixed(2)} ${sign}${Math.abs(changeValue).toFixed(2)} 
-                                <span class="percent">(${percent}%)</span>
-                            </span>
-                        </span>
-                    `);
-                }
-            }
-        } catch (e) {
-            console.error(`${name} 업데이트 실패`);
-        }
-    }
     
+    // 1. 코스피/코스닥 지수 호출 (공공데이터포털 API 예시 구조)
+    try {
+        const url = `https://apis.data.go.kr/1160100/service/GetIndexQuotationsService/getIndexQuotations?serviceKey=${SERVICE_KEY}&resultType=json&numOfRows=5&pageNo=1`;
+        
+        const res = await fetch(url);
+        const data = await res.json();
+        const stockItems = data.response.body.items.item;
+
+        stockItems.forEach(stock => {
+            // 방송에 필요한 지수만 필터링 (코스피, 코스닥)
+            if (stock.idxNm === "코스피" || stock.idxNm === "코스닥") {
+                const price = parseFloat(stock.clpr).toFixed(2); // 종가
+                const change = parseFloat(stock.vs).toFixed(2); // 전일대비
+                const fltRt = parseFloat(stock.fltRt).toFixed(2); // 등락률
+                
+                const colorClass = change >= 0 ? "up" : "down";
+                const sign = change >= 0 ? "▲" : "▼";
+
+                items.push(`
+                    <span class="item">
+                        ${stock.idxNm} 
+                        <span class="${colorClass}">
+                            ${price} ${sign}${Math.abs(change)} 
+                            <span class="percent">(${fltRt}%)</span>
+                        </span>
+                    </span>
+                `);
+            }
+        });
+    } catch (e) {
+        console.error("국내 데이터 로드 실패", e);
+    }
+
+    // 2. 미국 지수 및 유가는 기존 야후 방식을 병행하는 것이 효율적입니다.
+    // (공공데이터는 국내 데이터 중심이기 때문입니다.)
+    // ... 기존 야후 로직 추가 가능 ...
+
     if(items.length > 0) {
-        const combined = items.join("");
-        // 기존 내용과 비교하여 변경사항이 있을 때만 갱신 (화면 깜빡임 방지)
-        if (content.innerHTML !== combined + combined) {
-            content.innerHTML = combined + combined;
-        }
+        content.innerHTML = items.join("") + items.join("");
     }
 }
 
-// 1. 최초 즉시 실행
-getStockData();
-
-// 2. 갱신 주기: 10초 (가장 안전하면서도 빠른 주기)
-// 만약 더 빠르게 하고 싶다면 5000(5초)까지는 괜찮으나, 
-// 야후 API 특성상 1분 단위 데이터가 최선인 경우가 많습니다.
-setInterval(getStockData, 10000);
+// 갱신 주기: 방송용으로 10초 설정
+setInterval(getDomesticData, 10000);
+getDomesticData();
