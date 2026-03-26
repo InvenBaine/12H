@@ -1,13 +1,10 @@
-// 1. 공공데이터포털에서 받은 인증키를 여기에 넣으세요!
 const SERVICE_KEY = '1d1043efb7e415ec16b01e63c91431f9ef51e9fe28d3be82ef841228537ed315'; 
 
-// 2. 야후에서 가져올 해외 지수들
 const overseasGroups = {
     "🌎 해외": { "S&P500": "^GSPC", "나스닥": "^IXIC" },
     "🛢️ 지표": { "WTI유가": "CL=F", "미10년채": "^TNX" }
 };
 
-// 한국 시간 및 장 상태 판별
 function updateMarketInfo() {
     const now = new Date();
     const kst = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (9 * 3600000));
@@ -27,7 +24,7 @@ async function getStockData() {
     
     let htmlContent = "";
 
-    // --- [A] 국내 지수 (공공데이터 API 호출) ---
+    // --- [A] 국내 지수 (단위: pt) ---
     try {
         const krUrl = `https://apis.data.go.kr/1160100/service/GetIndexQuotationsService/getIndexQuotations?serviceKey=${SERVICE_KEY}&resultType=json&numOfRows=5&pageNo=1`;
         const proxyUrl = 'https://api.allorigins.win/get?url=';
@@ -46,21 +43,20 @@ async function getStockData() {
                 const colorClass = change >= 0 ? "up" : "down";
                 const sign = change >= 0 ? "▲" : "▼";
 
+                // 국내 지수는 'pt' 단위를 사용합니다.
                 htmlContent += `
                     <span class="item">
                         ${item.idxNm} 
                         <span class="${colorClass}">
-                            ${price} ${sign}${Math.abs(change)} 
+                            ${price}<small>pt</small> ${sign}${Math.abs(change)} 
                             <span class="percent">(${fltRt}%)</span>
                         </span>
                     </span>`;
             }
         });
-    } catch (e) {
-        console.error("국내 지수 로드 실패. 키 활성화 대기 중일 수 있습니다.");
-    }
+    } catch (e) { console.error("국내 지수 로드 실패"); }
 
-    // --- [B] 해외 및 기타 지수 (야후 API 호출) ---
+    // --- [B] 해외 및 지표 (단위: $, %) ---
     for (const [groupName, symbols] of Object.entries(overseasGroups)) {
         htmlContent += `<span class="group-label">${groupName}</span>`;
         for (const [name, symbol] of Object.entries(symbols)) {
@@ -81,11 +77,15 @@ async function getStockData() {
                     const colorClass = change >= 0 ? "up" : "down";
                     const sign = change >= 0 ? "▲" : "▼";
 
+                    // 지표별 단위 설정
+                    let unit = "$"; 
+                    if (name.includes("채권")) unit = "%"; // 국채 금리는 % 단위
+
                     htmlContent += `
                         <span class="item">
                             ${name} 
                             <span class="${colorClass}">
-                                ${price.toFixed(2)} ${sign}${Math.abs(change).toFixed(2)} 
+                                ${unit}${price.toFixed(2)} ${sign}${Math.abs(change).toFixed(2)} 
                                 <span class="percent">(${percent}%)</span>
                             </span>
                         </span>`;
@@ -99,7 +99,6 @@ async function getStockData() {
     }
 }
 
-// 초기 실행 및 인터벌 설정
 updateMarketInfo();
 setInterval(updateMarketInfo, 1000);
 getStockData();
