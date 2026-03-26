@@ -1,3 +1,25 @@
+// 상단 프록시 설정 부분 수정
+const proxyUrl = 'https://api.allorigins.win/raw?url='; // 'get?url=' 대신 'raw?url='을 쓰면 파싱이 더 쉽고 에러가 적습니다.
+
+async function getStockData() {
+    const content = document.getElementById('ticker-content');
+    if (!content) return;
+    
+    let htmlContent = "";
+
+    // [국내 지수 로직]
+    try {
+        const krUrl = `https://apis.data.go.kr/1160100/service/GetIndexQuotationsService/getIndexQuotations?serviceKey=${SERVICE_KEY}&resultType=json&numOfRows=5&pageNo=1`;
+        
+        // fetch 옵션에 mode: 'cors'를 명시하거나 헤더를 조정
+        const res = await fetch(proxyUrl + encodeURIComponent(krUrl));
+        
+        // raw 프록시를 썼을 때는 바로 json()으로 변환 가능할 수 있습니다.
+        const data = await res.json();
+        const krItems = data.response.body.items.item;
+
+        htmlContent += `<span class="group-label">🇰🇷 국내</span>`;
+       
 const SERVICE_KEY = '1d1043efb7e415ec16b01e63c91431f9ef51e9fe28d3be82ef841228537ed315'; 
 
 const overseasGroups = {
