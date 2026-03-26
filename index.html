@@ -2,9 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>주식 아가방 Ticker - Pastel Edition</title>
+    <title>주식 아가방 Ticker - Broadcast Ver.</title>
     <style>
-        /* 손글씨 느낌의 둥근 폰트 적용 */
         @import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@700&display=swap');
 
         body { margin: 0; padding: 0; background-color: transparent; overflow: hidden; font-family: 'Gaegu', cursive; }
@@ -12,25 +11,30 @@
         .ticker-wrapper {
             display: flex;
             width: 1920px;
-            height: 65px;
-            background-color: #F2C1D1; /* 로고의 연한 핑크 배경색 */
-            border-top: 5px solid #78C2AD; /* 로고의 민트색 포인트 */
+            height: 80px; /* 높이를 더 키웠습니다 */
+            background-color: #F2C1D1;
+            border-top: 6px solid #78C2AD;
             align-items: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.2);
         }
 
         .ticker-title {
-            background-color: #F9E076; /* 로고의 노란색 */
+            background-color: #F9E076;
             color: #4A4A4A;
-            padding: 0 35px;
+            padding: 0 40px;
             height: 100%;
             display: flex;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
-            font-size: 1.6rem;
+            font-size: 1.8rem; /* 제목 폰트 확대 */
             font-weight: bold;
-            border-right: 3px dashed #F2C1D1;
+            border-right: 4px dashed #F2C1D1;
             z-index: 10;
+            min-width: 250px;
         }
+
+        #current-time { font-size: 1.1rem; margin-top: -5px; color: #666; }
 
         .ticker-container {
             flex: 1;
@@ -41,22 +45,27 @@
         .ticker-move {
             display: inline-block;
             white-space: nowrap;
-            animation: ticker 45s linear infinite; /* 조금 더 여유로운 속도 */
-            color: #4A4A4A;
-            font-size: 1.5rem;
-            padding-left: 20px;
+            animation: ticker 40s linear infinite;
+            color: #333;
+            font-size: 2.2rem; /* 지수 폰트 대폭 확대 */
+            line-height: 80px;
         }
 
-        .item { 
-            margin-right: 80px; 
-            display: inline-flex; 
-            align-items: center;
+        .group-label {
+            background: #fff;
+            padding: 2px 12px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            margin-right: 15px;
+            color: #810CA8;
+            vertical-align: middle;
         }
 
-        /* 지수 등락에 따른 색상 (로고 톤에 맞춰 조정) */
-        .up { color: #E84A5F; font-weight: bold; } /* 따뜻한 빨강 */
-        .down { color: #35858B; font-weight: bold; } /* 차분한 청록 */
-        .percent { font-size: 1rem; margin-left: 8px; background: rgba(255,255,255,0.4); padding: 2px 6px; border-radius: 10px; }
+        .item { margin-right: 100px; display: inline-flex; align-items: center; }
+        .up { color: #E84A5F; text-shadow: 1px 1px 0px #fff; }
+        .down { color: #35858B; text-shadow: 1px 1px 0px #fff; }
+        .percent { font-size: 1.4rem; margin-left: 10px; opacity: 0.8; }
+        .market-status { font-size: 1rem; margin-left: 5px; color: #555; font-weight: normal; }
 
         @keyframes ticker {
             0% { transform: translateX(0); }
@@ -66,9 +75,12 @@
 </head>
 <body>
     <div class="ticker-wrapper">
-        <div class="ticker-title">⭐ 주식 아가방</div>
+        <div class="ticker-title">
+            <span>⭐ 주식 아가방</span>
+            <div id="current-time">00:00:00</div>
+        </div>
         <div class="ticker-container">
-            <div id="ticker-content" class="ticker-move">오늘의 시장 상황은 어떨까요? 로딩 중...</div>
+            <div id="ticker-content" class="ticker-move">시장 지수를 연결하고 있어요... ✨</div>
         </div>
     </div>
     <script src="market.js"></script>
