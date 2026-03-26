@@ -1,9 +1,9 @@
 const symbols = {
-    "KOSPI": "^KS11",
-    "KOSDAQ": "^KQ11",
+    "코스피": "^KS11",
+    "코스닥": "^KQ11",
     "S&P500": "^GSPC",
-    "US10Y": "^TNX",
-    "WTI Oil": "CL=F"
+    "미국 10년물": "^TNX",
+    "WTI 유가": "CL=F"
 };
 
 async function getStockData() {
@@ -23,35 +23,36 @@ async function getStockData() {
             
             if (data.chart.result) {
                 const quote = data.chart.result[0].meta;
-                const price = quote.regularMarketPrice.toFixed(2);
+                const price = quote.regularMarketPrice.toLocaleString(undefined, {minimumFractionDigits: 2});
                 const prevPrice = quote.previousClose;
                 
-                const change = (price - prevPrice).toFixed(2);
-                const percent = ((change / prevPrice) * 100).toFixed(2); // 등락률 계산
+                const changeValue = (quote.regularMarketPrice - prevPrice);
+                const percent = ((changeValue / prevPrice) * 100).toFixed(2);
                 
-                const colorClass = change >= 0 ? "up" : "down";
-                const sign = change >= 0 ? "▲" : "▼";
+                const colorClass = changeValue >= 0 ? "up" : "down";
+                const sign = changeValue >= 0 ? "▲" : "▼";
 
                 items.push(`
                     <span class="item">
                         ${name} 
                         <span class="${colorClass}">
-                            ${price} ${sign}${Math.abs(change)} 
-                            <span class="percent">(${percent}%)</span>
+                            ${price} ${sign}${Math.abs(changeValue).toFixed(2)} 
+                            <span class="percent">${percent}%</span>
                         </span>
                     </span>
                 `);
             }
         } catch (e) {
-            console.error(`${name} 로드 실패`);
+            console.error(`${name} 로딩 에러`);
         }
     }
     
     if(items.length > 0) {
         const combined = items.join("");
-        content.innerHTML = combined + combined;
+        content.innerHTML = combined + combined; // 무한 반복
     }
 }
 
+// 1분 간격 자동 업데이트
 getStockData();
 setInterval(getStockData, 60000);
