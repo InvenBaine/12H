@@ -1,113 +1,67 @@
-const SERVICE_KEY = '1d1043efb7e415ec16b01e63c91431f9ef51e9fe28d3be82ef841228537ed315'; 
+const SHEET_ID = '1VIvLvBigv9mbnPtGzFJP1R7O0YKB-VTCo4OOWZw8Evc';
 
-// 1. 야후에서 가져올 해외 지표 설정
-const overseasGroups = {
-    "🌎 해외": { "S&P500": "^GSPC", "나스닥": "^IXIC" },
-    "🛢️ 지표": { "WTI유가": "CL=F", "미10년채": "^TNX" }
-};
-
-// 2. 한국 시간 및 장 상태 판별 (KST 기준)
-function updateMarketInfo() {
+// 1. 시간 및 장 상태 업데이트
+function updateTime() {
     const now = new Date();
     const kst = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (9 * 3600000));
+    
+    const timeStr = kst.toLocaleTimeString('ko-KR', { hour12: false });
     const day = kst.getDay();
     const timeVal = kst.getHours() * 100 + kst.getMinutes();
 
-    let status = (day === 0 || day === 6) ? "주말 휴장" : 
-                 (timeVal >= 900 && timeVal < 1530) ? "장중" : "장 마감";
+    let status = (day === 0 || day === 6) ? "휴장" : 
+                 (timeVal >= 900 && timeVal < 1530) ? "장중" : "마감";
 
-    const timeStr = kst.toLocaleTimeString('ko-KR', { hour12: false });
-    const statusEl = document.getElementById('market-status');
     const timeEl = document.getElementById('current-time');
-    
-    // index.html 구조에 맞춰 시계 업데이트
-    if(timeEl) timeEl.innerHTML = `${timeStr} <span class="status-badge">${status}</span>`;
+    if(timeEl) {
+        timeEl.innerHTML = `${timeStr} <span class="status-badge">${status}</span>`;
+    }
 }
 
-// 3. 지수 데이터 가져오기 메인 함수
-async function getStockData() {
-    const content = document.getElementById('ticker-content');
-    if (!content) return;
+// 2. 구글 시트에서 데이터 가져오기
+async function getMarketData() {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
     
-    let htmlContent = "";
-    // 현재 가장 안정적인 CORS 프록시 사용
-    const proxyUrl = 'https://corsproxy.io/?';
-
-    // --- [A] 국내 지수 (공공데이터 API) ---
     try {
-        const krUrl = `https://apis.data.go.kr/1160100/service/GetIndexQuotationsService/getIndexQuotations?serviceKey=${SERVICE_KEY}&resultType=json&numOfRows=5&pageNo=1`;
-        
-        const res = await fetch(proxyUrl + encodeURIComponent(krUrl));
-        const data = await res.json();
-        
-        // 공공데이터 API 응답 구조 파싱
-        const krItems = data.response.body.items.item;
+        const res = await fetch(url);
+        const text = await res.text();
+        // 구글 시트 특유의 JSONP 형식을 순수 JSON으로 파싱
+        const json = JSON.parse(text.substring(47).slice(0, -2));
+        const rows = json.table.rows;
 
-        htmlContent += `<span class="group-label">🇰🇷 국내</span>`;
-        krItems.forEach(item => {
-            if (item.idxNm === "코스피" || item.idxNm === "코스닥") {
-                const price = parseFloat(item.clpr).toFixed(2);
-                const change = parseFloat(item.vs).toFixed(2);
-                const fltRt = parseFloat(item.fltRt).toFixed(2);
-                const colorClass = change >= 0 ? "up" : "down";
-                const sign = change >= 0 ? "▲" : "▼";
+        let html = "";
+        rows.forEach((row, index) => {
+            // 시트의 1행부터 데이터가 있다고 가정 (A:지수명, B:현재가, C:대비, D:등락률)
+            const name = row.c[0]?.v;   
+            const price = row.c[1]?.v;  
+            const change = row.c[2]?.v; 
+            const pct = row.c[3]?.v;    
 
-                htmlContent += `
-                    <span class="item">
-                        ${item.idxNm} 
-                        <span class="${colorClass}">
-                            ${price}<small>pt</small> ${sign}${Math.abs(change)} 
-                            <span class="percent">(${fltRt}%)</span>
-                        </span>
-                    </span>`;
-            }
+            if (!name) return;
+
+            const colorClass = change >= 0 ? "up" : "down";
+            const sign = change >= 0 ? "▲" : "▼";
+            const formattedPct = (pct * 100).toFixed(2);
+
+            html += `
+                <div class="item">
+                    <span class="label">${name}</span>
+                    <span class="${colorClass}">
+                        ${price} ${sign}${Math.abs(change).toFixed(2)}
+                        <span class="percent">(${formattedPct}%)</span>
+                    </span>
+                </div>`;
         });
+
+        // 티커가 끊기지 않게 두 번 반복해서 넣어줌
+        document.getElementById('ticker-content').innerHTML = html + html;
     } catch (e) {
-        console.error("국내 지수 로드 실패:", e);
-    }
-
-    // --- [B] 해외 및 지표 (야후 파이낸스) ---
-    for (const [groupName, symbols] of Object.entries(overseasGroups)) {
-        htmlContent += `<span class="group-label">${groupName}</span>`;
-        for (const [name, symbol] of Object.entries(symbols)) {
-            try {
-                const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d&_=${Date.now()}`;
-                
-                const res = await fetch(proxyUrl + encodeURIComponent(yahooUrl));
-                const data = await res.json();
-                
-                if (data.chart && data.chart.result) {
-                    const meta = data.chart.result[0].meta;
-                    const price = meta.regularMarketPrice;
-                    const prevPrice = meta.previousClose;
-                    const change = (price - prevPrice);
-                    const percent = ((change / prevPrice) * 100).toFixed(2);
-                    const colorClass = change >= 0 ? "up" : "down";
-                    const sign = change >= 0 ? "▲" : "▼";
-
-                    let unit = "$"; 
-                    if (name.includes("채권")) unit = "%";
-
-                    htmlContent += `
-                        <span class="item">
-                            ${name} 
-                            <span class="${colorClass}">
-                                ${unit}${price.toFixed(2)} ${sign}${Math.abs(change).toFixed(2)} 
-                                <span class="percent">(${percent}%)</span>
-                            </span>
-                        </span>`;
-                }
-            } catch (e) { console.error(name + " 로드 실패"); }
-        }
-    }
-    
-    if(htmlContent) {
-        content.innerHTML = htmlContent + htmlContent;
+        console.error("데이터 로드 실패:", e);
     }
 }
 
-// 4. 실행 및 주기 설정
-updateMarketInfo();
-setInterval(updateMarketInfo, 1000);
-getStockData();
-setInterval(getStockData, 30000); // 30초마다 데이터 갱신
+// 초기 실행 및 반복 설정
+updateTime();
+setInterval(updateTime, 1000);
+getMarketData();
+setInterval(getMarketData, 60000); // 1분마다 갱신
